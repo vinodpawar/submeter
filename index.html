@@ -1,108 +1,492 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Tenant Light Bill Calculator</title>
-  <style>
-    body { font-family: Arial, sans-serif; max-width: 700px; margin: 20px auto; padding: 10px; }
-    label, input { display: block; margin: 10px 0; }
-    button { margin-top: 15px; }
-    .result { margin-top: 20px; padding: 10px; background: #f0f0f0; border-radius: 5px; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tenant Electricity Billing</title>
+<style>
+:root{
+  --bg:#f5f6f8; --card:#ffffff; --text:#1a1d23; --sub:#6b7280; --border:#e3e5e9;
+  --accent:#2563eb; --accent-text:#ffffff; --danger:#dc2626; --ok:#16a34a;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){ --bg:#14161a; --card:#1d2025; --text:#eceef1; --sub:#9aa1ac; --border:#30343b; }
+}
+:root[data-theme="dark"]{ --bg:#14161a; --card:#1d2025; --text:#eceef1; --sub:#9aa1ac; --border:#30343b; }
+html{scroll-padding-top:env(safe-area-inset-top,0px);}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:15px;}
+.wrap{max-width:760px;margin:0 auto;padding:16px 14px 60px;}
+h1{font-size:19px;margin:4px 0 2px;}
+.muted{color:var(--sub);font-size:13px;margin:0 0 14px;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px;}
+.card h2{font-size:15px;margin:0 0 10px;}
+label{display:block;font-size:12px;color:var(--sub);margin:8px 0 3px;}
+input[type=text],input[type=number]{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:14px;}
+.row{display:flex;gap:8px;flex-wrap:wrap;}
+.row>div{flex:1;min-width:120px;}
+table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px;overflow-x:auto;display:block;}
+th,td{text-align:left;padding:6px 5px;border-bottom:1px solid var(--border);white-space:nowrap;}
+th{color:var(--sub);font-weight:500;}
+button{background:var(--accent);color:var(--accent-text);border:none;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:600;cursor:pointer;margin-top:10px;}
+button.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent);}
+button.small{padding:5px 9px;font-size:12px;margin:0;}
+a.linkbtn{display:inline-block;background:transparent;color:var(--accent);border:1px solid var(--accent);border-radius:8px;padding:9px 14px;font-size:13px;text-decoration:none;margin-top:10px;}
+.msgbox{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:13px;white-space:pre-wrap;margin:6px 0;}
+details summary{cursor:pointer;font-size:13px;color:var(--sub);}
+.status{font-size:12px;color:var(--sub);min-height:16px;}
+.pill{display:inline-block;background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:2px 8px;font-size:11px;color:var(--sub);}
+</style>
 </head>
 <body>
-  <h1>Tenant Light Bill Calculator</h1>
-
-  <label>MSEB Bill Amount for xx3051:
-    <input type="number" id="meterOneBill" step="any">
-  </label>
-
-  <label>MSEB Units Consumed on xx3051:
-    <input type="number" id="meterOneUnits" step="any">
-  </label>
-
-  <label>Previous Reading - Shops:
-    <input type="number" id="prevShops" step="any">
-  </label>
-  <label>Current Reading - Shops:
-    <input type="number" id="currShops" step="any">
-  </label>
-
-  <label>Previous Reading - Block 1:
-    <input type="number" id="prevBlock1" step="any">
-  </label>
-  <label>Current Reading - Block 1:
-    <input type="number" id="currBlock1" step="any">
-  </label>
-
-  <label>Previous Reading - Block 2:
-    <input type="number" id="prevBlock2" step="any">
-  </label>
-  <label>Current Reading - Block 2:
-    <input type="number" id="currBlock2" step="any">
-  </label>
-
-  <button onclick="calculateBill()">Calculate Bill</button>
-
-  <div class="result" id="result"></div>
-
-  <script>
-function calculateBill() {
-  const meterOneBill = parseFloat(document.getElementById('meterOneBill').value);
-  const meterOneUnits = parseFloat(document.getElementById('meterOneUnits').value);
-
-  const prevShops = parseFloat(document.getElementById('prevShops').value);
-  const currShops = parseFloat(document.getElementById('currShops').value);
-  const unitsShops = currShops - prevShops;
-
-  const prevBlock1 = parseFloat(document.getElementById('prevBlock1').value);
-  const currBlock1 = parseFloat(document.getElementById('currBlock1').value);
-  const unitsBlock1 = currBlock1 - prevBlock1;
-
-  const prevBlock2 = parseFloat(document.getElementById('prevBlock2').value);
-  const currBlock2 = parseFloat(document.getElementById('currBlock2').value);
-  const unitsBlock2 = currBlock2 - prevBlock2;
-
-  const finalRate = meterOneBill / meterOneUnits;
-
-  let shopsBill = unitsShops * finalRate;
-  let block1Bill = unitsBlock1 * finalRate;
-  let block2Bill = unitsBlock2 * finalRate;
-
-  const generatedBill = shopsBill + block1Bill + block2Bill;
-
-  let output = `<strong>Actual MSEB Bill:</strong> ₹${meterOneBill.toFixed(2)}<br>`;
-  output += `<strong>Total Units:</strong> ${meterOneUnits.toFixed(2)}<br>`;
-  output += `<strong>Rate per Unit:</strong> ₹${finalRate.toFixed(4)}<br><br>`;
-
-  if (Math.abs(meterOneBill - generatedBill) < 0.01) {
-    // Bills match
-    output += `<strong>Calculated Bills:</strong><br>`;
-    output += `Shops: ₹${shopsBill.toFixed(2)}<br>`;
-    output += `Block 1: ₹${block1Bill.toFixed(2)}<br>`;
-    output += `Block 2: ₹${block2Bill.toFixed(2)}<br>`;
-    output += `<br><strong>Total (Check):</strong> ₹${generatedBill.toFixed(2)}`;
-  } else {
-    // Adjust if mismatch
-    const totalBeforeAdjustment = shopsBill + block1Bill + block2Bill;
-    const diffForEach = (meterOneBill - totalBeforeAdjustment) / 3;
-
-    shopsBill += diffForEach;
-    block1Bill += diffForEach;
-    block2Bill += diffForEach;
-
-    output += `<strong>Adjusted Bills (due to mismatch):</strong><br>`;
-    output += `Shops (1 & 2): ₹${shopsBill.toFixed(2)}<br>`;
-    output += `Block 1: ₹${block1Bill.toFixed(2)}<br>`;
-    output += `Block 2: ₹${block2Bill.toFixed(2)}<br>`;
-    output += `<br><strong>Adjusted Total:</strong> ₹${(shopsBill + block1Bill + block2Bill).toFixed(2)}`;
-  }
-
-  document.getElementById('result').innerHTML = output;
+<div class="wrap">
+  <h1>⚡ Tenant Electricity Billing</h1>
+  <p class="muted">Meter 0664 (shared: T1/T2/T3) &nbsp;+&nbsp; Meter 3051 (1BHK via MSEB calculator)</p>
+  <div id="app"></div>
+</div>
+<script>
+const TCONF = [
+  {k:'t1', meter:'0664'}, {k:'t2', meter:'0664'}, {k:'t3', meter:'0664'}, {k:'t4', meter:'3051'}
+];
+let S=null;
+const defaultState = ()=>({
+  tenants:{
+    t1:{name:'Block 1 Advocate', short:'Block 1'},
+    t2:{name:'Block 2 Tailor', short:'Block 2'},
+    t3:{name:'Shop Chat Bhandar', short:'Shop Chat Bhandar'},
+    t4:{name:'1 BHK', short:'1 BHK'}
+  },
+  upi:'9923232321',
+  prevReadings:{t1:0,t2:0,t3:0},
+  dues:{t1:0,t2:0,t3:0,t4:0},
+  draft:{periodFrom:'',periodTo:'',cur:{t1:'',t2:'',t3:''},total0664:'',t4units:'',t4amount:''},
+  history:[]
+});
+const DB_NAME='TenantBillingDB', STORE='state', KEY='main';
+function openDB(){
+  return new Promise((resolve,reject)=>{
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = ()=>{ req.result.createObjectStore(STORE); };
+    req.onsuccess = ()=> resolve(req.result);
+    req.onerror = ()=> reject(req.error);
+  });
 }
+async function loadLocal(){
+  try{
+    const conn = await openDB();
+    return await new Promise((resolve,reject)=>{
+      const tx = conn.transaction(STORE,'readonly');
+      const req = tx.objectStore(STORE).get(KEY);
+      req.onsuccess = ()=> resolve(req.result || null);
+      req.onerror = ()=> reject(req.error);
+    });
+  }catch(e){ return null; }
+}
+async function saveLocal(s){
+  try{
+    const conn = await openDB();
+    return await new Promise((resolve,reject)=>{
+      const tx = conn.transaction(STORE,'readwrite');
+      tx.objectStore(STORE).put(s, KEY);
+      tx.oncomplete = ()=> resolve(true);
+      tx.onerror = ()=> reject(tx.error);
+    });
+  }catch(e){ return false; }
+}
+async function loadState(){
+  let s = await loadLocal();
+  if(!s){
+    // one-time migration from the older localStorage version, if present
+    try{
+      const old = localStorage.getItem('tbill_state');
+      if(old){ s = JSON.parse(old); await saveLocal(s); }
+    }catch(e){}
+  }
+  if(!s) s = defaultState();
+  const d = defaultState();
+  Object.keys(d.tenants).forEach(k=>{
+    s.tenants[k] = s.tenants[k] || {};
+    if(!s.tenants[k].name) s.tenants[k].name = d.tenants[k].name;
+    if(!s.tenants[k].short) s.tenants[k].short = d.tenants[k].short;
+  });
+  s.draft = s.draft || d.draft;
+  return s;
+}
+async function persist(){
+  await saveLocal(S); // always keep a local offline cache
+  const cfg=getGhConfig();
+  if(ghReady(cfg)){
+    const r = await ghSave(S);
+    if(r.ok){ ghMode='github'; setStatus('Saved to GitHub ✓'); }
+    else { setStatus('GitHub save failed ('+r.reason+') — saved locally only.'); }
+  }
+}
+
+// ---- Simple plain-text format (readable directly on GitHub / in a text editor) ----
+function serializeState(s){
+  const lines=[];
+  lines.push('UPI='+s.upi);
+  ['t1','t2','t3','t4'].forEach(k=>{
+    lines.push(k.toUpperCase()+'_NAME='+s.tenants[k].name);
+    lines.push(k.toUpperCase()+'_SHORT='+s.tenants[k].short);
+  });
+  ['t1','t2','t3'].forEach(k=>lines.push('PREV_'+k.toUpperCase()+'='+s.prevReadings[k]));
+  ['t1','t2','t3','t4'].forEach(k=>lines.push('DUE_'+k.toUpperCase()+'='+s.dues[k]));
+  const d=s.draft||{};
+  lines.push('DRAFT_FROM='+(d.periodFrom||''));
+  lines.push('DRAFT_TO='+(d.periodTo||''));
+  ['t1','t2','t3'].forEach(k=>lines.push('DRAFT_CUR_'+k.toUpperCase()+'='+((d.cur&&d.cur[k])||'')));
+  lines.push('DRAFT_TOTAL0664='+(d.total0664||''));
+  lines.push('DRAFT_T4UNITS='+(d.t4units||''));
+  lines.push('DRAFT_T4AMOUNT='+(d.t4amount||''));
+  lines.push('', 'HISTORY');
+  s.history.forEach(h=>{
+    lines.push(`${h.period} | T1=${h.due.t1} | T2=${h.due.t2} | T3=${h.due.t3} | T4=${h.due.t4} | saved=${h.savedAt||''}`);
+  });
+  return lines.join('\n');
+}
+function parseState(text){
+  const s = defaultState();
+  s.history = [];
+  let inHistory=false;
+  text.split('\n').forEach(raw=>{
+    const line=raw.trim();
+    if(!line) return;
+    if(line==='HISTORY'){ inHistory=true; return; }
+    if(!inHistory){
+      const idx=line.indexOf('='); if(idx<0) return;
+      const key=line.slice(0,idx).trim(), val=line.slice(idx+1).trim();
+      if(key==='UPI') s.upi=val;
+      else if(key==='DRAFT_FROM') s.draft.periodFrom=val;
+      else if(key==='DRAFT_TO') s.draft.periodTo=val;
+      else if(key.startsWith('DRAFT_CUR_')) s.draft.cur[key.slice(10).toLowerCase()]=val;
+      else if(key==='DRAFT_TOTAL0664') s.draft.total0664=val;
+      else if(key==='DRAFT_T4UNITS') s.draft.t4units=val;
+      else if(key==='DRAFT_T4AMOUNT') s.draft.t4amount=val;
+      else if(key.endsWith('_NAME')){ const k=key.split('_')[0].toLowerCase(); s.tenants[k]=s.tenants[k]||{}; s.tenants[k].name=val; }
+      else if(key.endsWith('_SHORT')){ const k=key.split('_')[0].toLowerCase(); s.tenants[k]=s.tenants[k]||{}; s.tenants[k].short=val; }
+      else if(key.startsWith('PREV_')){ s.prevReadings[key.split('_')[1].toLowerCase()]=+val||0; }
+      else if(key.startsWith('DUE_')){ s.dues[key.split('_')[1].toLowerCase()]=+val||0; }
+    } else {
+      const parts=line.split('|').map(p=>p.trim());
+      const due={}; let savedAt='';
+      parts.slice(1).forEach(p=>{
+        const m=p.match(/^T(\d)=(-?\d+(\.\d+)?)$/i);
+        if(m) due['t'+m[1]]=+m[2];
+        else if(p.startsWith('saved=')) savedAt=p.slice(6);
+      });
+      s.history.push({period:parts[0], due, savedAt});
+    }
+  });
+  return s;
+}
+
+// ---- GitHub sync (stores the state as a JSON file in a repo you own) ----
+let ghSha=null, ghMode='local';
+function getGhConfig(){ try{ return JSON.parse(localStorage.getItem('tbill_gh_cfg')||'{}'); }catch(e){ return {}; } }
+function setGhConfig(cfg){ try{ localStorage.setItem('tbill_gh_cfg', JSON.stringify(cfg)); }catch(e){} }
+function ghReady(cfg){ return !!(cfg.owner && cfg.repo && cfg.token && cfg.path); }
+function b64enc(str){ return btoa(String.fromCharCode(...new TextEncoder().encode(str))); }
+function b64dec(str){ return new TextDecoder().decode(Uint8Array.from(atob(str.replace(/\n/g,'')), c=>c.charCodeAt(0))); }
+function ghUrl(cfg){ return `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${cfg.path}`; }
+
+async function ghLoad(){
+  const cfg=getGhConfig(); if(!ghReady(cfg)) return {ok:false, reason:'not configured'};
+  try{
+    const res = await fetch(ghUrl(cfg)+`?ref=${cfg.branch||'main'}`, {headers:{Authorization:`Bearer ${cfg.token}`, Accept:'application/vnd.github+json'}});
+    if(res.status===404){ ghSha=null; return {ok:true, notFound:true}; }
+    if(!res.ok) return {ok:false, reason:'HTTP '+res.status};
+    const json = await res.json();
+    ghSha = json.sha;
+    return {ok:true, data: parseState(b64dec(json.content))};
+  }catch(e){ return {ok:false, reason:e.message}; }
+}
+async function ghSave(state, retried){
+  const cfg=getGhConfig(); if(!ghReady(cfg)) return {ok:false, reason:'not configured'};
+  const body = { message:'Update tenant billing data', content:b64enc(serializeState(state)), branch: cfg.branch||'main' };
+  if(ghSha) body.sha = ghSha;
+  try{
+    const res = await fetch(ghUrl(cfg), {method:'PUT', headers:{Authorization:`Bearer ${cfg.token}`, Accept:'application/vnd.github+json', 'Content-Type':'application/json'}, body:JSON.stringify(body)});
+    if(res.status===409 && !retried){ await ghLoad(); return ghSave(state, true); } // sha conflict: refresh once and retry
+    if(!res.ok){ const err=await res.json().catch(()=>({})); return {ok:false, reason:'HTTP '+res.status+' '+(err.message||'')}; }
+    const json = await res.json();
+    ghSha = json.content.sha;
+    return {ok:true};
+  }catch(e){ return {ok:false, reason:e.message}; }
+}
+async function connectGithub(){
+  const cfg = {
+    owner: document.getElementById('gh_owner').value.trim(),
+    repo: document.getElementById('gh_repo').value.trim(),
+    branch: document.getElementById('gh_branch').value.trim() || 'main',
+    path: document.getElementById('gh_path').value.trim() || 'billing-data.txt',
+    token: document.getElementById('gh_token').value.trim()
+  };
+  if(!ghReady(cfg)){ setStatus('Please fill in owner, repo and token.'); return; }
+  setGhConfig(cfg);
+  setStatus('Connecting to GitHub...');
+  const r = await ghLoad();
+  if(!r.ok){ setStatus('GitHub connect failed: '+r.reason); ghMode='local'; render(); return; }
+  if(r.notFound){
+    const w = await ghSave(S);
+    if(!w.ok){ setStatus('Could not create file: '+w.reason); ghMode='local'; render(); return; }
+    setStatus('Created new data file on GitHub and synced.');
+  } else {
+    S = r.data;
+    const d=defaultState();
+    Object.keys(d.tenants).forEach(k=>{ S.tenants[k]=S.tenants[k]||d.tenants[k]; });
+    S.draft = S.draft || d.draft;
+    await saveLocal(S);
+    setStatus('Loaded data from GitHub.');
+  }
+  ghMode='github'; render();
+}
+function disconnectGithub(){ setGhConfig({}); ghMode='local'; ghSha=null; render(); setStatus('Disconnected. Data stays local on this device now.'); }
+
+function exportBackup(){
+  const blob = new Blob([serializeState(S)], {type:'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'tenant-billing-backup.txt';
+  a.click();
+}
+function importBackup(input){
+  const file = input.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async (e)=>{
+    try{ S = parseState(e.target.result); await persist(); render(); setStatus('Backup restored.'); }
+    catch(err){ setStatus('Invalid backup file.'); }
+  };
+  reader.readAsText(file);
+}
+function setStatus(msg){ const el=document.getElementById('status'); if(el) el.textContent=msg; setTimeout(()=>{ if(el) el.textContent=''; },2500); }
+
+function fmt(n){ return '₹'+Math.round(n).toLocaleString('en-IN'); }
+
+function fmtDate(str){
+  if(!str) return '';
+  const [y,m,d] = str.split('-').map(Number);
+  return new Date(y, m-1, d).toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'numeric'});
+}
+function getPeriod(){
+  const from = document.getElementById('periodFrom').value;
+  const to = document.getElementById('periodTo').value;
+  if(!from || !to) return '(period not set)';
+  return `${fmtDate(from)} - ${fmtDate(to)}`;
+}
+
+function render(){
+  const app=document.getElementById('app');
+  app.innerHTML = `
+  <div class="card">
+    <details>
+      <summary>⚙️ Tenant names & UPI (tap to edit)</summary>
+      <div class="row" style="margin-top:8px;">
+        ${TCONF.map(t=>`<div>
+          <label>${t.k.toUpperCase()} full name</label><input type="text" id="name_${t.k}" value="${S.tenants[t.k].name}">
+          <label>${t.k.toUpperCase()} WhatsApp greeting name</label><input type="text" id="short_${t.k}" value="${S.tenants[t.k].short}">
+        </div>`).join('')}
+      </div>
+      <label>Mobile number for payment (GPay/PhonePe/UPI)</label>
+      <input type="text" id="upi" value="${S.upi}">
+      <button class="ghost" onclick="saveSettings()">Save Settings</button>
+      <p class="muted" style="margin-top:10px">${ghMode==='github' ? '🔗 Synced with GitHub — data is stored in your repo.' : '💾 Local only on this browser (not synced across devices).'} Back up or restore manually:</p>
+      <button class="ghost" onclick="exportBackup()">⬇ Download Backup</button>
+      <input type="file" id="restoreFile" accept=".txt" style="display:none" onchange="importBackup(this)">
+      <button class="ghost" onclick="document.getElementById('restoreFile').click()">⬆ Restore Backup</button>
+    </details>
+  </div>
+
+  <div class="card">
+    <details ${ghMode==='github' ? '' : 'open'}>
+      <summary>🔗 GitHub Sync ${ghMode==='github' ? '(connected)' : '(not connected)'}</summary>
+      <p class="muted" style="margin-top:8px">Stores your billing data as a JSON file in a repo you own, so it's the same across every device. Use a <b>fine-grained Personal Access Token</b> scoped to just this one repo with "Contents: Read and write" — nothing more. Prefer a separate private repo for the data file (keep this app's own repo public, data repo private).</p>
+      <div class="row">
+        <div><label>Repo owner (username)</label><input type="text" id="gh_owner" value="${getGhConfig().owner||''}"></div>
+        <div><label>Repo name</label><input type="text" id="gh_repo" value="${getGhConfig().repo||''}"></div>
+      </div>
+      <div class="row">
+        <div><label>Branch</label><input type="text" id="gh_branch" value="${getGhConfig().branch||'main'}"></div>
+        <div><label>File path</label><input type="text" id="gh_path" value="${getGhConfig().path||'billing-data.txt'}"></div>
+      </div>
+      <label>Personal Access Token</label>
+      <input type="password" id="gh_token" value="${getGhConfig().token||''}" placeholder="github_pat_...">
+      <button onclick="connectGithub()">Connect &amp; Sync Now</button>
+      ${ghMode==='github' ? '<button class="ghost" onclick="disconnectGithub()">Disconnect</button>' : ''}
+    </details>
+  </div>
+
+  <div class="card">
+    <h2>🗓 Billing Period</h2>
+    <div class="row">
+      <div><label>From</label><input type="date" id="periodFrom" value="${S.draft.periodFrom||''}"></div>
+      <div><label>To</label><input type="date" id="periodTo" value="${S.draft.periodTo||''}"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Meter 0664 <span class="pill">T1 · T2 · T3</span></h2>
+    <table>
+      <tr><th>Tenant</th><th>Prev reading</th><th>Current reading</th><th>Prev due</th></tr>
+      ${['t1','t2','t3'].map(k=>`<tr>
+        <td>${S.tenants[k].name}</td>
+        <td><input type="number" id="prev_${k}" value="${S.prevReadings[k]}" style="width:80px"></td>
+        <td><input type="number" id="cur_${k}" placeholder="units" value="${S.draft.cur[k]||''}" style="width:80px"></td>
+        <td><input type="number" id="duein_${k}" value="${S.dues[k]}" style="width:80px"></td>
+      </tr>`).join('')}
+    </table>
+    <label>Total MSEB bill amount for meter 0664 (₹)</label>
+    <input type="number" id="total0664" placeholder="e.g. 4500" value="${S.draft.total0664||''}">
+    <button onclick="calcMain()">Calculate Split</button>
+    <div id="mainResult"></div>
+  </div>
+
+  <div class="card">
+    <h2>Meter 3051 <span class="pill">1 BHK (T4)</span></h2>
+    <p class="muted" style="margin-top:0">Open MSEB calculator → LT / Residential / Sanction 2 / Connected 2 / 1-Phase → enter units → paste amount below.</p>
+    <a class="linkbtn" href="https://wss.mahadiscom.in/wss/wss?uiActionName=getEnergyBillCalculator" target="_blank" rel="noopener">Open MSEB Bill Calculator ↗</a>
+    <label>Consumption units (reference)</label>
+    <input type="number" id="t4units" placeholder="units" value="${S.draft.t4units||''}">
+    <label>Bill amount from MSEB site (₹)</label>
+    <input type="number" id="t4amount" placeholder="e.g. 350" value="${S.draft.t4amount||''}">
+    <label>Previous due (T4)</label>
+    <input type="number" id="duein_t4" value="${S.dues.t4}">
+    <button onclick="calcT4()">Add to Bill</button>
+  </div>
+
+  <div class="card">
+    <h2>📩 Messages</h2>
+    <div id="messages"><p class="muted">Calculate both meters above, then generate.</p></div>
+    <button onclick="genMessages()">Generate WhatsApp Messages</button>
+    <button class="ghost" onclick="closeMonth()">Save &amp; Close Month</button>
+    <div class="status" id="status"></div>
+  </div>
+
+  <div class="card">
+    <details>
+      <summary>📜 History (${S.history.length} saved)</summary>
+      <table style="margin-top:8px">
+        <tr><th>Period</th><th>T1</th><th>T2</th><th>T3</th><th>T4</th></tr>
+        ${S.history.slice().reverse().map(h=>`<tr><td>${h.period}</td><td>${fmt(h.due.t1)}</td><td>${fmt(h.due.t2)}</td><td>${fmt(h.due.t3)}</td><td>${fmt(h.due.t4)}</td></tr>`).join('')}
+      </table>
+    </details>
+  </div>`;
+}
+
+let computed = {shares:null, t4due:null};
+
+function calcMain(){
+  const cons={}, curVal={};
+  let total=0;
+  ['t1','t2','t3'].forEach(k=>{
+    const prev=+document.getElementById('prev_'+k).value||0;
+    const cur=+document.getElementById('cur_'+k).value||0;
+    curVal[k]=cur;
+    cons[k]=Math.max(0, cur-prev);
+    total+=cons[k];
+  });
+  const bill=+document.getElementById('total0664').value||0;
+  let shares={}, raw={};
+  ['t1','t2','t3'].forEach(k=>{
+    raw[k]= total>0 ? (bill*cons[k]/total) : bill/3;
+    shares[k]=Math.floor(raw[k]);
+  });
+  let assigned=shares.t1+shares.t2+shares.t3;
+  let remainder=bill-assigned;
+  const order=['t1','t2','t3'].sort((a,b)=>(raw[b]-shares[b])-(raw[a]-shares[a]));
+  for(let i=0;i<remainder;i++){ shares[order[i%3]]++; }
+  const due={};
+  ['t1','t2','t3'].forEach(k=>{ due[k]= shares[k] + (+document.getElementById('duein_'+k).value||0); });
+  computed.shares=shares; computed.cons=cons; computed.curVal=curVal; computed.due0664=due;
+  document.getElementById('mainResult').innerHTML = `<table>
+    <tr><th>Tenant</th><th>Units</th><th>This month</th><th>Total due</th></tr>
+    ${['t1','t2','t3'].map(k=>`<tr><td>${S.tenants[k].name}</td><td>${cons[k]}</td><td>${fmt(shares[k])}</td><td><b>${fmt(due[k])}</b></td></tr>`).join('')}
+  </table>`;
+  S.draft.periodFrom=document.getElementById('periodFrom').value;
+  S.draft.periodTo=document.getElementById('periodTo').value;
+  ['t1','t2','t3'].forEach(k=>{ S.draft.cur[k]=document.getElementById('cur_'+k).value; });
+  S.draft.total0664=document.getElementById('total0664').value;
+  persist();
+}
+
+function calcT4(){
+  const amt=+document.getElementById('t4amount').value||0;
+  const prevDue=+document.getElementById('duein_t4').value||0;
+  computed.t4share=amt; computed.t4units=+document.getElementById('t4units').value||0;
+  computed.due0664 = computed.due0664 || {};
+  computed.t4due = amt+prevDue;
+  setStatus('T4 bill added: '+fmt(computed.t4due));
+  S.draft.t4units=document.getElementById('t4units').value;
+  S.draft.t4amount=document.getElementById('t4amount').value;
+  persist();
+}
+
+function genMessages(){
+  if(!computed.shares || computed.t4due==null){ setStatus('Please calculate both meters first.'); return; }
+  const period=getPeriod();
+  const all=['t1','t2','t3','t4'];
+  const html = all.map(k=>{
+    const short=S.tenants[k].short || S.tenants[k].name;
+    const share = k==='t4' ? computed.t4share : computed.shares[k];
+    const total = k==='t4' ? computed.t4due : computed.due0664[k];
+    const prevDue = total-share;
+    const msg = `Hello ${short},\nElectricity bill for ${period}:\nThis month: ${fmt(share)}` +
+      (prevDue>0 ? `\nPrevious pending: ${fmt(prevDue)}` : '') +
+      `\nTotal payable: ${fmt(total)}\nPlease pay to mobile number: ${S.upi}\nThank you!`;
+    return `<div class="msgbox" id="msg_${k}">${msg}</div><button class="small ghost" onclick="copyMsg('${k}')">Copy for ${S.tenants[k].name}</button>`;
+  }).join('<br>');
+  document.getElementById('messages').innerHTML = html;
+}
+
+function copyMsg(k){
+  const text = document.getElementById('msg_'+k).innerText;
+  navigator.clipboard.writeText(text).then(()=>setStatus('Copied!')).catch(()=>setStatus('Copy failed — select text manually.'));
+}
+
+async function saveSettings(){
+  TCONF.forEach(t=>{
+    S.tenants[t.k].name = document.getElementById('name_'+t.k).value || S.tenants[t.k].name;
+    S.tenants[t.k].short = document.getElementById('short_'+t.k).value || S.tenants[t.k].short;
+  });
+  S.upi = document.getElementById('upi').value || S.upi;
+  await persist(); render(); setStatus('Settings saved.');
+}
+
+async function closeMonth(){
+  if(!computed.shares || computed.t4due==null){ setStatus('Calculate both meters before closing the month.'); return; }
+  const period=getPeriod();
+  const due = {...computed.due0664, t4: computed.t4due};
+  S.history.push({period, due, savedAt:new Date().toISOString()});
+  ['t1','t2','t3'].forEach(k=>{ S.prevReadings[k]=computed.curVal[k]; S.dues[k]=due[k]; });
+  S.dues.t4 = due.t4;
+  computed={shares:null,t4due:null};
+  await persist();
+  render();
+  setStatus("Month saved. Balances carried forward — zero out a tenant's Prev due once they pay.");
+}
+
+(async()=>{
+  const cfg = getGhConfig();
+  if(ghReady(cfg)){
+    const r = await ghLoad();
+    if(r.ok && !r.notFound){
+      S = r.data;
+      const d=defaultState();
+      Object.keys(d.tenants).forEach(k=>{ S.tenants[k]=S.tenants[k]||d.tenants[k]; });
+    S.draft = S.draft || d.draft;
+      await saveLocal(S);
+      ghMode='github';
+    } else {
+      S = await loadState(); // fall back to local cache; will retry sync on next save
+      ghMode = r.ok ? 'github' : 'local';
+    }
+  } else {
+    S = await loadState();
+  }
+  render();
+})();
 </script>
-
-
 </body>
 </html>
