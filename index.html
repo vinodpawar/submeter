@@ -42,8 +42,7 @@ details summary{cursor:pointer;font-size:13px;color:var(--sub);}
 </head>
 <body>
 <div class="wrap">
-  <h1>⚡ Tenant Electricity Billing</h1>
-  <p class="muted">Meter 0664 (shared: T1/T2/T3) &nbsp;+&nbsp; Meter 3051 (1BHK via MSEB calculator)</p>
+  <h1>⚡ Tenant Electricity Billing</h1>  
   <div id="app"></div>
 </div>
 <script>
@@ -184,7 +183,7 @@ function parseState(text){
 }
 
 // ---- GitHub sync (stores the state as a JSON file in a repo you own) ----
-let ghSha=null, ghMode='local';
+let ghSha=null, ghMode='locked';
 function getGhConfig(){ try{ return JSON.parse(localStorage.getItem('tbill_gh_cfg')||'{}'); }catch(e){ return {}; } }
 function setGhConfig(cfg){ try{ localStorage.setItem('tbill_gh_cfg', JSON.stringify(cfg)); }catch(e){} }
 function ghReady(cfg){ return !!(cfg.owner && cfg.repo && cfg.token && cfg.path); }
@@ -228,10 +227,11 @@ async function connectGithub(){
   setGhConfig(cfg);
   setStatus('Connecting to GitHub...');
   const r = await ghLoad();
-  if(!r.ok){ setStatus('GitHub connect failed: '+r.reason); ghMode='local'; render(); return; }
+  if(!r.ok){ setStatus('GitHub connect failed: '+r.reason); ghMode='locked'; render(); return; }
   if(r.notFound){
+    if(!S) S = defaultState();
     const w = await ghSave(S);
-    if(!w.ok){ setStatus('Could not create file: '+w.reason); ghMode='local'; render(); return; }
+    if(!w.ok){ setStatus('Could not create file: '+w.reason); ghMode='locked'; render(); return; }
     setStatus('Created new data file on GitHub and synced.');
   } else {
     S = r.data;
@@ -243,7 +243,7 @@ async function connectGithub(){
   }
   ghMode='github'; render();
 }
-function disconnectGithub(){ setGhConfig({}); ghMode='local'; ghSha=null; render(); setStatus('Disconnected. Data stays local on this device now.'); }
+function disconnectGithub(){ setGhConfig({}); ghMode='locked'; ghSha=null; S=null; render(); setStatus('Disconnected — locked again until you reconnect.'); }
 
 function exportBackup(){
   const blob = new Blob([serializeState(S)], {type:'text/plain'});
@@ -277,7 +277,28 @@ function getPeriod(){
   return `${fmtDate(from)} - ${fmtDate(to)}`;
 }
 
+function renderLocked(){
+  const app=document.getElementById('app');
+  app.innerHTML = `
+  <div class="card">
+    <h2>🔒 Connect to view your billing data</h2>    
+    <div class="row">
+      <div><label>username</label><input type="text" id="gh_owner" value="${getGhConfig().owner||''}"></div>
+      <div><label>Repo name</label><input type="text" id="gh_repo" value="${getGhConfig().repo||''}"></div>
+    </div>
+    <div class="row">
+      <div><label>Branch</label><input type="text" id="gh_branch" value="${getGhConfig().branch||'main'}"></div>
+      <div><label>File path</label><input type="text" id="gh_path" value="${getGhConfig().path||'billing-data.txt'}"></div>
+    </div>
+    <label>Personal Access Token</label>
+    <input type="password" id="gh_token" value="" placeholder="github_pat_...">
+    <button onclick="connectGithub()">Connect &amp; Unlock</button>
+    <div class="status" id="status"></div>
+  </div>`;
+}
+
 function render(){
+  if(ghMode!=='github'){ renderLocked(); return; }
   const app=document.getElementById('app');
   app.innerHTML = `
   <div class="card">
@@ -292,7 +313,7 @@ function render(){
       <label>Mobile number for payment (GPay/PhonePe/UPI)</label>
       <input type="text" id="upi" value="${S.upi}">
       <button class="ghost" onclick="saveSettings()">Save Settings</button>
-      <p class="muted" style="margin-top:10px">${ghMode==='github' ? '🔗 Synced with GitHub — data is stored in your repo.' : '💾 Local only on this browser (not synced across devices).'} Back up or restore manually:</p>
+      <p class="muted" style="margin-top:10px">🔗 Synced with GitHub — data is stored in your repo, not on this device alone.</p>
       <button class="ghost" onclick="exportBackup()">⬇ Download Backup</button>
       <input type="file" id="restoreFile" accept=".txt" style="display:none" onchange="importBackup(this)">
       <button class="ghost" onclick="document.getElementById('restoreFile').click()">⬆ Restore Backup</button>
@@ -300,9 +321,8 @@ function render(){
   </div>
 
   <div class="card">
-    <details ${ghMode==='github' ? '' : 'open'}>
-      <summary>🔗 GitHub Sync ${ghMode==='github' ? '(connected)' : '(not connected)'}</summary>
-      <p class="muted" style="margin-top:8px">Stores your billing data as a JSON file in a repo you own, so it's the same across every device. Use a <b>fine-grained Personal Access Token</b> scoped to just this one repo with "Contents: Read and write" — nothing more. Prefer a separate private repo for the data file (keep this app's own repo public, data repo private).</p>
+    <details>
+      <summary>🔗 GitHub Sync (connected)</summary>
       <div class="row">
         <div><label>Repo owner (username)</label><input type="text" id="gh_owner" value="${getGhConfig().owner||''}"></div>
         <div><label>Repo name</label><input type="text" id="gh_repo" value="${getGhConfig().repo||''}"></div>
@@ -313,8 +333,8 @@ function render(){
       </div>
       <label>Personal Access Token</label>
       <input type="password" id="gh_token" value="${getGhConfig().token||''}" placeholder="github_pat_...">
-      <button onclick="connectGithub()">Connect &amp; Sync Now</button>
-      ${ghMode==='github' ? '<button class="ghost" onclick="disconnectGithub()">Disconnect</button>' : ''}
+      <button onclick="connectGithub()">Reconnect / Update</button>
+      <button class="ghost" onclick="disconnectGithub()">Disconnect &amp; Lock</button>
     </details>
   </div>
 
@@ -475,15 +495,18 @@ async function closeMonth(){
       S = r.data;
       const d=defaultState();
       Object.keys(d.tenants).forEach(k=>{ S.tenants[k]=S.tenants[k]||d.tenants[k]; });
-    S.draft = S.draft || d.draft;
+      S.draft = S.draft || d.draft;
       await saveLocal(S);
       ghMode='github';
+    } else if(r.ok && r.notFound){
+      S = await loadState();
+      const w = await ghSave(S);
+      ghMode = w.ok ? 'github' : 'locked';
     } else {
-      S = await loadState(); // fall back to local cache; will retry sync on next save
-      ghMode = r.ok ? 'github' : 'local';
+      ghMode='locked'; // connection failed — stay locked, don't expose any cached data
     }
   } else {
-    S = await loadState();
+    ghMode='locked'; // never connected on this device/browser
   }
   render();
 })();
