@@ -43,7 +43,11 @@ details summary{cursor:pointer;font-size:13px;color:var(--sub);}
 <body>
 <div class="wrap">
   <h1>⚡ Tenant Electricity Billing</h1>  
-  <div id="app"></div>
+  <div id="app"></div> 
+<p style="text-align:center;color:var(--sub);font-size:12px;margin-top:24px;">
+    This application is intended for personal use only.<br>
+    For queries, please email <a href="mailto:contact@vinodpawar.com" style="color:var(--sub);">contact@vinodpawar.com</a>.
+  </p>  
 </div>
 <script>
 const TCONF = [
@@ -280,20 +284,21 @@ function getPeriod(){
 function renderLocked(){
   const app=document.getElementById('app');
   app.innerHTML = `
-  <div class="card">
-    <h2>🔒 Connect to view your billing data</h2>    
+	
+  <div class="card" style="margin-top: 20px">
+    <h2>🔒 Connect to view your billing data</h2>    	
     <div class="row">
       <div><label>username</label><input type="text" id="gh_owner" value="${getGhConfig().owner||''}"></div>
-      <div><label>Repo name</label><input type="text" id="gh_repo" value="${getGhConfig().repo||''}"></div>
+      <div><label>repo name</label><input type="text" id="gh_repo" value="${getGhConfig().repo||''}"></div>
     </div>
     <div class="row">
-      <div><label>Branch</label><input type="text" id="gh_branch" value="${getGhConfig().branch||'main'}"></div>
-      <div><label>File path</label><input type="text" id="gh_path" value="${getGhConfig().path||'billing-data.txt'}"></div>
+      <div><label>branch</label><input type="text" id="gh_branch" value="${getGhConfig().branch||'main'}"></div>
+      <div><label>file path</label><input type="text" id="gh_path" value="${getGhConfig().path||'billing-data.txt'}"></div>
     </div>
     <label>Personal Access Token</label>
     <input type="password" id="gh_token" value="" placeholder="github_pat_...">
-    <button onclick="connectGithub()">Connect &amp; Unlock</button>
-    <div class="status" id="status"></div>
+    <button onclick="connectGithub()">authenticate</button>
+    <div class="status" id="status"></div>	
   </div>`;
 }
 
@@ -324,12 +329,12 @@ function render(){
     <details>
       <summary>🔗 GitHub Sync (connected)</summary>
       <div class="row">
-        <div><label>Repo owner (username)</label><input type="text" id="gh_owner" value="${getGhConfig().owner||''}"></div>
-        <div><label>Repo name</label><input type="text" id="gh_repo" value="${getGhConfig().repo||''}"></div>
+        <div><label>username</label><input type="text" id="gh_owner" value="${getGhConfig().owner||''}"></div>
+        <div><label>repo name</label><input type="text" id="gh_repo" value="${getGhConfig().repo||''}"></div>
       </div>
       <div class="row">
-        <div><label>Branch</label><input type="text" id="gh_branch" value="${getGhConfig().branch||'main'}"></div>
-        <div><label>File path</label><input type="text" id="gh_path" value="${getGhConfig().path||'billing-data.txt'}"></div>
+        <div><label>branch</label><input type="text" id="gh_branch" value="${getGhConfig().branch||'main'}"></div>
+        <div><label>file path</label><input type="text" id="gh_path" value="${getGhConfig().path||'billing-data.txt'}"></div>
       </div>
       <label>Personal Access Token</label>
       <input type="password" id="gh_token" value="${getGhConfig().token||''}" placeholder="github_pat_...">
@@ -392,6 +397,7 @@ function render(){
         ${S.history.slice().reverse().map(h=>`<tr><td>${h.period}</td><td>${fmt(h.due.t1)}</td><td>${fmt(h.due.t2)}</td><td>${fmt(h.due.t3)}</td><td>${fmt(h.due.t4)}</td></tr>`).join('')}
       </table>
     </details>
+	<div>This app is developed for internal use only.</div>
   </div>`;
 }
 
@@ -511,5 +517,6 @@ async function closeMonth(){
   render();
 })();
 </script>
+
 </body>
 </html>
