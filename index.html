@@ -296,7 +296,7 @@ function renderLocked(){
       <div><label>file path</label><input type="text" id="gh_path" value="${getGhConfig().path||'billing-data.txt'}"></div>
     </div>
     <label>Personal Access Token</label>
-    <input type="password" id="gh_token" value="" placeholder="github_pat_...">
+    <input type="password" id="gh_token" value="" >
     <button onclick="connectGithub()">authenticate</button>
     <div class="status" id="status"></div>	
   </div>`;
@@ -337,7 +337,7 @@ function render(){
         <div><label>file path</label><input type="text" id="gh_path" value="${getGhConfig().path||'billing-data.txt'}"></div>
       </div>
       <label>Personal Access Token</label>
-      <input type="password" id="gh_token" value="${getGhConfig().token||''}" placeholder="github_pat_...">
+      <input type="password" id="gh_token" value="${getGhConfig().token||''}" >
       <button onclick="connectGithub()">Reconnect / Update</button>
       <button class="ghost" onclick="disconnectGithub()">Disconnect &amp; Lock</button>
     </details>
