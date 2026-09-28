@@ -47,7 +47,7 @@ details summary{cursor:pointer;font-size:13px;color:var(--sub);}
 </head>
 <body>
 <div class="wrap">
-  <h1>⚡ Tenant Electricity Billing</h1>
+  <h1 style="margin-bottom: 20px">⚡ Tenant Electricity Billing</h1>
   <div id="app"></div>
   <p style="text-align:center;color:var(--sub);font-size:12px;margin-top:24px;">
     This application is intended for personal use only.<br>
@@ -324,8 +324,8 @@ function renderLocked(){
   <div class="card">
     <h2>🔒 Connect to view your billing data</h2>
     <div class="connect-row">
-      <div class="f-user"><label>Username</label><input type="text" id="gh_owner" value="${getGhConfig().owner||''}" autocomplete="username" placeholder="username"></div>
-      <div class="f-token"><label>Personal Access Token</label><input type="password" id="gh_token" value="" placeholder="github_pat_..." autocomplete="current-password"></div>
+      <div class="f-user"><label>Username</label><input type="text" id="gh_owner" value="${getGhConfig().owner||''}" autocomplete="username"></div>
+      <div class="f-token"><label>Personal Access Token</label><input type="password" id="gh_token" value="" autocomplete="current-password"></div>
       <button onclick="connectGithub()">Continue</button>
     </div>
     <div class="status" id="status" style="${ghError?'color:#dc2626;margin-top:10px;font-size:13px':''}">${ghError}</div>
