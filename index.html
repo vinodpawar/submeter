@@ -24,9 +24,14 @@ h1{font-size:19px;margin:4px 0 2px;}
 .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px;}
 .card h2{font-size:15px;margin:0 0 10px;}
 label{display:block;font-size:12px;color:var(--sub);margin:8px 0 3px;}
-input[type=text],input[type=number]{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:14px;}
+input[type=text],input[type=number],input[type=password]{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:14px;}
 .row{display:flex;gap:8px;flex-wrap:wrap;}
 .row>div{flex:1;min-width:120px;}
+.connect-row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-top:6px;}
+.connect-row .f-user,.connect-row .f-token{flex:1 1 0;min-width:140px;}
+.connect-row label{margin-top:0;}
+.connect-row button{margin-top:0;height:36px;white-space:nowrap;}
+@media (max-width:520px){ .connect-row .f-user,.connect-row .f-token{flex:1 1 100%;} .connect-row button{width:100%;} }
 table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px;overflow-x:auto;display:block;}
 th,td{text-align:left;padding:6px 5px;border-bottom:1px solid var(--border);white-space:nowrap;}
 th{color:var(--sub);font-weight:500;}
@@ -42,12 +47,12 @@ details summary{cursor:pointer;font-size:13px;color:var(--sub);}
 </head>
 <body>
 <div class="wrap">
-  <h1>⚡ Tenant Electricity Billing</h1>  
-  <div id="app"></div> 
-<p style="text-align:center;color:var(--sub);font-size:12px;margin-top:24px;">
+  <h1 style="margin-bottom: 20px">⚡ Tenant Electricity Billing</h1>  
+  <div id="app"></div>
+  <p style="text-align:center;color:var(--sub);font-size:12px;margin-top:24px;">
     This application is intended for personal use only.<br>
-    For queries, please email <a href="mailto:contact@vinodpawar.com" style="color:var(--sub);">contact@vinodpawar.com</a>.
-  </p>  
+    For queries, please contact <a href="mailto:contact@vinodpawar.com" style="color:var(--sub);">contact@vinodpawar.com</a>.
+  </p>
 </div>
 <script>
 const TCONF = [
@@ -188,6 +193,8 @@ function parseState(text){
 
 // ---- GitHub sync (stores the state as a JSON file in a repo you own) ----
 let ghSha=null, ghMode='locked';
+// Fixed data location. Change GH_REPO if your private data repo has a different name.
+const GH_REPO='tenant-billing-data', GH_BRANCH='main', GH_PATH='billing-data.txt';
 function getGhConfig(){ try{ return JSON.parse(localStorage.getItem('tbill_gh_cfg')||'{}'); }catch(e){ return {}; } }
 function setGhConfig(cfg){ try{ localStorage.setItem('tbill_gh_cfg', JSON.stringify(cfg)); }catch(e){} }
 function ghReady(cfg){ return !!(cfg.owner && cfg.repo && cfg.token && cfg.path); }
@@ -222,12 +229,12 @@ async function ghSave(state, retried){
 async function connectGithub(){
   const cfg = {
     owner: document.getElementById('gh_owner').value.trim(),
-    repo: document.getElementById('gh_repo').value.trim(),
-    branch: document.getElementById('gh_branch').value.trim() || 'main',
-    path: document.getElementById('gh_path').value.trim() || 'billing-data.txt',
+    repo: GH_REPO,
+    branch: GH_BRANCH,
+    path: GH_PATH,
     token: document.getElementById('gh_token').value.trim()
   };
-  if(!ghReady(cfg)){ setStatus('Please fill in owner, repo and token.'); return; }
+  if(!ghReady(cfg)){ setStatus('Please enter your username and token.'); return; }
   setGhConfig(cfg);
   setStatus('Connecting to GitHub...');
   const r = await ghLoad();
@@ -284,21 +291,14 @@ function getPeriod(){
 function renderLocked(){
   const app=document.getElementById('app');
   app.innerHTML = `
-	
-  <div class="card" style="margin-top: 20px">
-    <h2>🔒 Connect to view your billing data</h2>    	
-    <div class="row">
-      <div><label>username</label><input type="text" id="gh_owner" value="${getGhConfig().owner||''}"></div>
-      <div><label>repo name</label><input type="text" id="gh_repo" value="${getGhConfig().repo||''}"></div>
+  <div class="card">
+    <h2>🔒 Connect to view your billing data</h2>
+    <div class="connect-row">
+      <div class="f-user"><label>Username</label><input type="text" id="gh_owner" value="${getGhConfig().owner||''}" autocomplete="username" placeholder="Enter username"></div>
+      <div class="f-token"><label>Personal Access Token</label><input type="password" id="gh_token" value="" placeholder="Enter PAT" autocomplete="current-password"></div>
+      <button onclick="connectGithub()">Continue</button>
     </div>
-    <div class="row">
-      <div><label>branch</label><input type="text" id="gh_branch" value="${getGhConfig().branch||'main'}"></div>
-      <div><label>file path</label><input type="text" id="gh_path" value="${getGhConfig().path||'billing-data.txt'}"></div>
-    </div>
-    <label>Personal Access Token</label>
-    <input type="password" id="gh_token" value="" >
-    <button onclick="connectGithub()">authenticate</button>
-    <div class="status" id="status"></div>	
+    <div class="status" id="status"></div>
   </div>`;
 }
 
@@ -328,17 +328,12 @@ function render(){
   <div class="card">
     <details>
       <summary>🔗 GitHub Sync (connected)</summary>
-      <div class="row">
-        <div><label>username</label><input type="text" id="gh_owner" value="${getGhConfig().owner||''}"></div>
-        <div><label>repo name</label><input type="text" id="gh_repo" value="${getGhConfig().repo||''}"></div>
+      <div class="connect-row" style="margin-top:10px">
+        <div class="f-user"><label>Username</label><input type="text" id="gh_owner" value="${getGhConfig().owner||''}" autocomplete="username"></div>
+        <div class="f-token"><label>Personal Access Token</label><input type="password" id="gh_token" value="${getGhConfig().token||''}" placeholder="github_pat_..." autocomplete="current-password"></div>
+        <button onclick="connectGithub()">Update</button>
       </div>
-      <div class="row">
-        <div><label>branch</label><input type="text" id="gh_branch" value="${getGhConfig().branch||'main'}"></div>
-        <div><label>file path</label><input type="text" id="gh_path" value="${getGhConfig().path||'billing-data.txt'}"></div>
-      </div>
-      <label>Personal Access Token</label>
-      <input type="password" id="gh_token" value="${getGhConfig().token||''}" >
-      <button onclick="connectGithub()">Reconnect / Update</button>
+      <div style="height:8px"></div>
       <button class="ghost" onclick="disconnectGithub()">Disconnect &amp; Lock</button>
     </details>
   </div>
@@ -397,7 +392,6 @@ function render(){
         ${S.history.slice().reverse().map(h=>`<tr><td>${h.period}</td><td>${fmt(h.due.t1)}</td><td>${fmt(h.due.t2)}</td><td>${fmt(h.due.t3)}</td><td>${fmt(h.due.t4)}</td></tr>`).join('')}
       </table>
     </details>
-	<div>This app is developed for internal use only.</div>
   </div>`;
 }
 
@@ -517,6 +511,5 @@ async function closeMonth(){
   render();
 })();
 </script>
-
 </body>
 </html>
