@@ -47,7 +47,7 @@ details summary{cursor:pointer;font-size:13px;color:var(--sub);}
 </head>
 <body>
 <div class="wrap">
-  <h1 style="margin-bottom: 20px">⚡ Tenant Electricity Billing</h1>  
+  <h1>⚡ Tenant Electricity Billing</h1>
   <div id="app"></div>
   <p style="text-align:center;color:var(--sub);font-size:12px;margin-top:24px;">
     This application is intended for personal use only.<br>
@@ -193,8 +193,39 @@ function parseState(text){
 
 // ---- GitHub sync (stores the state as a JSON file in a repo you own) ----
 let ghSha=null, ghMode='locked';
-// Fixed data location. Change GH_REPO if your private data repo has a different name.
-const GH_REPO='tenant-billing-data', GH_BRANCH='main', GH_PATH='billing-data.txt';
+// Data file location. Leave GH_REPO empty to auto-detect the repo your token can access.
+const GH_REPO='submeterdata', GH_PATH='billing-data.txt';
+let ghError='';
+function httpReason(status, msg){
+  if(status===401) return 'The token is invalid or has expired (HTTP 401).';
+  if(status===403) return 'The token does not have permission. It needs Contents: Read and write on your data repo (HTTP 403).';
+  if(status===404) return 'Repo or file not found. Check the token has access to your data repo (HTTP 404).';
+  return 'GitHub returned HTTP '+status+(msg?' - '+msg:'')+'.';
+}
+async function detectRepo(owner, token){
+  const h={Authorization:`Bearer ${token}`, Accept:'application/vnd.github+json'};
+  let res;
+  if(GH_REPO){ // known repo: look it up directly to get its default branch
+    try{ res = await fetch(`https://api.github.com/repos/${owner}/${GH_REPO}`, {headers:h}); }
+    catch(e){ return {ok:false, reason:'Could not reach GitHub. Check your internet connection.'}; }
+    if(!res.ok) return {ok:false, reason:httpReason(res.status)+' Repo: '+owner+'/'+GH_REPO+'.'};
+    const repo = await res.json();
+    return {ok:true, repo:repo.name, branch:repo.default_branch||'main'};
+  }
+  try{ res = await fetch('https://api.github.com/user/repos?per_page=100&sort=updated', {headers:h}); }
+  catch(e){ return {ok:false, reason:'Could not reach GitHub. Check your internet connection.'}; }
+  if(!res.ok) return {ok:false, reason:httpReason(res.status)};
+  const all = await res.json();
+  const mine = all.filter(r=>r.owner && r.owner.login.toLowerCase()===owner.toLowerCase());
+  if(!mine.length) return {ok:false, reason:'This token cannot see any repo under "'+owner+'". Check the username, and that the token was given access to your data repo.'};
+  let pick = null;
+  if(GH_REPO) pick = mine.find(r=>r.name.toLowerCase()===GH_REPO.toLowerCase());
+  if(!pick) pick = mine.find(r=>r.name.toLowerCase()==='tenant-billing-data');
+  if(!pick && mine.length===1) pick = mine[0];
+  if(!pick) pick = mine.find(r=>/billing/i.test(r.name));
+  if(!pick) return {ok:false, reason:'Several repos are visible ('+mine.map(r=>r.name).join(', ')+'). Limit the token to just your data repo.'};
+  return {ok:true, repo:pick.name, branch:pick.default_branch||'main'};
+}
 function getGhConfig(){ try{ return JSON.parse(localStorage.getItem('tbill_gh_cfg')||'{}'); }catch(e){ return {}; } }
 function setGhConfig(cfg){ try{ localStorage.setItem('tbill_gh_cfg', JSON.stringify(cfg)); }catch(e){} }
 function ghReady(cfg){ return !!(cfg.owner && cfg.repo && cfg.token && cfg.path); }
@@ -207,7 +238,7 @@ async function ghLoad(){
   try{
     const res = await fetch(ghUrl(cfg)+`?ref=${cfg.branch||'main'}`, {headers:{Authorization:`Bearer ${cfg.token}`, Accept:'application/vnd.github+json'}});
     if(res.status===404){ ghSha=null; return {ok:true, notFound:true}; }
-    if(!res.ok) return {ok:false, reason:'HTTP '+res.status};
+    if(!res.ok) return {ok:false, reason:httpReason(res.status)};
     const json = await res.json();
     ghSha = json.sha;
     return {ok:true, data: parseState(b64dec(json.content))};
@@ -215,34 +246,33 @@ async function ghLoad(){
 }
 async function ghSave(state, retried){
   const cfg=getGhConfig(); if(!ghReady(cfg)) return {ok:false, reason:'not configured'};
-  const body = { message:'Update tenant billing data', content:b64enc(serializeState(state)), branch: cfg.branch||'main' };
-  if(ghSha) body.sha = ghSha;
+  const body = { message:'Update tenant billing data', content:b64enc(serializeState(state)) };
+  if(ghSha){ body.sha = ghSha; if(cfg.branch) body.branch = cfg.branch; }
   try{
     const res = await fetch(ghUrl(cfg), {method:'PUT', headers:{Authorization:`Bearer ${cfg.token}`, Accept:'application/vnd.github+json', 'Content-Type':'application/json'}, body:JSON.stringify(body)});
     if(res.status===409 && !retried){ await ghLoad(); return ghSave(state, true); } // sha conflict: refresh once and retry
-    if(!res.ok){ const err=await res.json().catch(()=>({})); return {ok:false, reason:'HTTP '+res.status+' '+(err.message||'')}; }
+    if(!res.ok){ const err=await res.json().catch(()=>({})); return {ok:false, reason:httpReason(res.status, err.message)}; }
     const json = await res.json();
     ghSha = json.content.sha;
     return {ok:true};
   }catch(e){ return {ok:false, reason:e.message}; }
 }
 async function connectGithub(){
-  const cfg = {
-    owner: document.getElementById('gh_owner').value.trim(),
-    repo: GH_REPO,
-    branch: GH_BRANCH,
-    path: GH_PATH,
-    token: document.getElementById('gh_token').value.trim()
-  };
-  if(!ghReady(cfg)){ setStatus('Please enter your username and token.'); return; }
+  const owner=document.getElementById('gh_owner').value.trim();
+  const token=document.getElementById('gh_token').value.trim();
+  ghError='';
+  if(!owner || !token){ ghError='Please enter your username and token.'; ghMode='locked'; render(); return; }
+  const btn=document.querySelector('.connect-row button'); if(btn){ btn.disabled=true; btn.textContent='Connecting...'; }
+  const found = await detectRepo(owner, token);
+  if(!found.ok){ ghError=found.reason; ghMode='locked'; render(); return; }
+  const cfg = { owner, repo:found.repo, branch:found.branch, path:GH_PATH, token };
   setGhConfig(cfg);
-  setStatus('Connecting to GitHub...');
   const r = await ghLoad();
-  if(!r.ok){ setStatus('GitHub connect failed: '+r.reason); ghMode='locked'; render(); return; }
+  if(!r.ok){ ghError='Connected to '+found.repo+' but could not read the file. '+r.reason; ghMode='locked'; render(); return; }
   if(r.notFound){
     if(!S) S = defaultState();
     const w = await ghSave(S);
-    if(!w.ok){ setStatus('Could not create file: '+w.reason); ghMode='locked'; render(); return; }
+    if(!w.ok){ ghError='Connected to '+found.repo+' but could not create '+GH_PATH+'. '+w.reason; ghMode='locked'; render(); return; }
     setStatus('Created new data file on GitHub and synced.');
   } else {
     S = r.data;
@@ -294,11 +324,11 @@ function renderLocked(){
   <div class="card">
     <h2>🔒 Connect to view your billing data</h2>
     <div class="connect-row">
-      <div class="f-user"><label>Username</label><input type="text" id="gh_owner" value="${getGhConfig().owner||''}" autocomplete="username" placeholder="Enter username"></div>
-      <div class="f-token"><label>Personal Access Token</label><input type="password" id="gh_token" value="" placeholder="Enter PAT" autocomplete="current-password"></div>
+      <div class="f-user"><label>Username</label><input type="text" id="gh_owner" value="${getGhConfig().owner||''}" autocomplete="username" placeholder="username"></div>
+      <div class="f-token"><label>Personal Access Token</label><input type="password" id="gh_token" value="" placeholder="github_pat_..." autocomplete="current-password"></div>
       <button onclick="connectGithub()">Continue</button>
     </div>
-    <div class="status" id="status"></div>
+    <div class="status" id="status" style="${ghError?'color:#dc2626;margin-top:10px;font-size:13px':''}">${ghError}</div>
   </div>`;
 }
 
@@ -503,7 +533,7 @@ async function closeMonth(){
       const w = await ghSave(S);
       ghMode = w.ok ? 'github' : 'locked';
     } else {
-      ghMode='locked'; // connection failed — stay locked, don't expose any cached data
+      ghMode='locked'; ghError='Could not reconnect: '+r.reason; // stay locked, don't expose any cached data
     }
   } else {
     ghMode='locked'; // never connected on this device/browser
